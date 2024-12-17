@@ -1,6 +1,5 @@
 ---
 title: "Основы обработки данных с помощью R и Dplyr"
-author: "konstantinsmirnitsky@yandex.ru"
 format: 
   md:
     output-file: README.md

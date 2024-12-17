@@ -1,0 +1,230 @@
+---
+title: "Исследование информации о состоянии беспроводных сетей"
+format: 
+  md:
+    output-file: README.md
+---
+
+## Цель
+
+1. Получить знания о методах исследования радиоэлектронной обстановки
+2. Составить представление о механизмах работы Wi-Fi сетей на канальном и сетевом уровне модели OSI
+3. Закрепить практические навыки использования языка программирования R для обработки данных
+4. Закрепить знания основных функций обработки данных экосистемы `tidyverse` языка R
+
+## ️Исходные данные
+
+1.  R 4.4.1
+2.  RStudio 2024.04.2+764
+
+## ️Общий план выполнения
+
+Используя программный пакет `dplyr` языка программирования R провести анализ журналов и ответить на вопросы.
+
+## Содержание ЛР
+
+### Шаг 1: Подготовка данных
+
+1. Импорт пакетов
+
+```{R}
+library(dplyr)
+library(readr)
+library(tidyr)
+```
+
+2. Получение данных (без пустых столбцов)
+
+```{R}
+has_data <- function(x) { sum(!is.na(x)) > 0 }
+
+data_1 <- read_csv("./data/data_1.csv") %>% select_if(has_data)
+data_2 <- read_csv("./data/data_2.csv") %>% select_if(has_data)
+```
+
+3. Проверка структуры
+
+```{R}
+glimpse(data_1)
+```
+
+```{R}
+glimpse(data_2)
+```
+
+### Шаг 2: Анализ
+
+#### Точки доступа
+
+1. **Определить небезопасные точки доступа (без шифрования – OPN)**
+
+```{R}
+data_1 %>% 
+  filter(Privacy == "OPN") %>%
+  select(BSSID) %>%
+  distinct(BSSID) %>%
+  knitr::kable()
+```
+
+2. **Определить производителя для каждого обнаруженного устройства**
+
+Для определения производителей обнаруженных устройств воспользуемся БД производителей из состава Wireshark и онлайн сервисами OUI Lookup
+
+```
+E8:28:C1:DC:BD:52 - Eltex Enterprise Ltd.
+00:26:99:F2:7A:EF - Cisco Systems, Inc
+E8:28:C1:DC:33:12 - Eltex Enterprise Ltd.
+E8:28:C1:DE:74:31 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:41 - Eltex Enterprise Ltd.
+02:BC:15:7E:D5:DC - ? (ESSID - MT_FREE)
+00:26:99:F2:7A:E0 - Cisco Systems, Inc
+E8:28:C1:DC:B2:50 - Eltex Enterprise Ltd.
+E8:28:C1:DC:B2:40 - Eltex Enterprise Ltd.
+E8:28:C1:DC:B2:52 - Eltex Enterprise Ltd.
+E8:28:C1:DC:C6:B0 - Eltex Enterprise Ltd.
+E8:28:C1:DC:C6:B1 - Eltex Enterprise Ltd.
+E8:28:C1:DC:C6:B2 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:51 - Eltex Enterprise Ltd.
+02:CF:8B:87:B4:F9 - ? (ESSID - MT_FREE)
+E8:28:C1:DC:C8:32 - Eltex Enterprise Ltd.
+00:AB:0A:00:10:10 - ?
+E8:28:C1:DE:74:32 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:42 - Eltex Enterprise Ltd.
+00:3E:1A:5D:14:45 - ? (ESSID - MT_FREE)
+00:25:00:FF:94:73 - Apple, Inc.
+E8:28:C1:DC:FF:F2 - Eltex Enterprise Ltd.
+E8:28:C1:DE:47:D1 - Eltex Enterprise Ltd.
+E8:28:C1:DC:BD:50 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:40 - Eltex Enterprise Ltd.
+00:53:7A:99:98:56 - ? (ESSID - MT_FREE)
+02:67:F1:B0:6C:98 - ? (ESSID - MT_FREE)
+E8:28:C1:DC:0B:B2 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:52 - Eltex Enterprise Ltd.
+E8:28:C1:DE:47:D2 - Eltex Enterprise Ltd.
+E8:28:C1:DE:47:D0 - Eltex Enterprise Ltd.
+E8:28:C1:DC:B2:42 - Eltex Enterprise Ltd.
+E8:28:C1:DC:C8:30 - Eltex Enterprise Ltd.
+00:03:7A:1A:03:56 - Taiyo Yuden Co., Ltd.
+E8:28:C1:DE:74:30 - Eltex Enterprise Ltd.
+E0:D9:E3:48:FF:D2 - Eltex Enterprise Ltd.
+E8:28:C1:DC:B2:51 - Eltex Enterprise Ltd.
+E0:D9:E3:49:00:B1 - Eltex Enterprise Ltd.
+E8:28:C1:DD:04:50 - Eltex Enterprise Ltd.
+E8:28:C1:DC:B2:41 - Eltex Enterprise Ltd.
+00:03:7F:12:34:56 - Atheros Communications, Inc.
+E8:28:C1:DC:C8:31 - Eltex Enterprise Ltd.
+```
+
+3. **Выявить устройства, использующие последнюю версию протокола шифрования WPA3, и названия точек доступа, реализованных на этих устройствах**
+
+```{R}
+data_1 %>% 
+  filter(grepl('WPA3', Privacy)) %>%
+  select(BSSID, ESSID) %>%
+  knitr::kable()
+```
+
+4. **Отсортировать точки доступа по интервалу времени, в течение которого они находились на связи, по убыванию**
+
+```{R}
+data_1 %>% 
+  mutate(duration = difftime(Last_time_seen, First_time_seen, units="mins")) %>%
+  select(BSSID, duration) %>%
+  arrange(desc(duration)) %>%
+  knitr::kable()
+```
+
+5. **Обнаружить топ-10 самых быстрых точек доступа**
+
+```{R}
+data_1 %>% 
+  arrange(desc(Speed)) %>%
+  select(BSSID, Speed) %>% 
+  head(10) %>%
+  knitr::kable()
+```
+
+6. **Отсортировать точки доступа по частоте отправки запросов (beacons) в единицу времени по их убыванию**
+
+```{R}
+data_1 %>% mutate(frequency = N_beacons / as.numeric(difftime(Last_time_seen, First_time_seen, units="mins"))) %>%
+  select(BSSID, frequency) %>%
+  arrange(desc(frequency)) %>%
+  knitr::kable()
+```
+
+
+#### Данные клиентов
+
+1. **Определить производителя для каждого обнаруженного устройства**
+
+```{R}
+data_2 %>%
+  filter(BSSID != "(not associated)") %>%
+  mutate(maker = substr(BSSID, 1, 8)) %>%
+  select(maker) %>%
+  unique() %>%
+  knitr::kable()
+```
+
+```
+00:03:7F Atheros Communications, Inc.
+00:0D:97 Hitachi Energy USA Inc.
+00:23:EB Cisco Systems, Inc
+00:25:00 Apple, Inc.
+00:26:99 Cisco Systems, Inc
+08:3A:2F Guangzhou Juan Intelligent Tech Joint Stock Co.,Ltd
+0C:80:63 Tp-Link Technologies Co.,Ltd.
+DC:09:4C Huawei Technologies Co.,Ltd
+E0:D9:E3 Eltex Enterprise Ltd.
+E8:28:C1 Eltex Enterprise Ltd.
+
+Остальные - неизвестны
+```
+
+2. **Обнаружить устройства, которые НЕ рандомизируют свой MAC адрес**
+
+Если второй символ адреса это 2, 6, A или E, то это рандомизированный адрес.
+
+```{R}
+data_2 %>%
+  select(BSSID) %>%
+  filter(BSSID != "(not associated)" & !grepl("^.[2|6|A|E].+", BSSID)) %>%
+  knitr::kable()
+```
+
+3. **Кластеризовать запросы от устройств к точкам доступа по их именам. Определить время появления устройства в зоне радиовидимости и время выхода его из нее**
+
+```{R}
+data_2 %>%
+  separate_rows(Probed_ESSIDs, sep=",") %>%
+  group_by(Probed_ESSIDs) %>%
+  summarise(first_time = min(First_time_seen, na.rm = TRUE),
+            last_time = max(Last_time_seen, na.rm = TRUE))
+```
+
+
+4. **Оценить стабильность уровня сигнала внури кластера во времени. Выявить наиболее стабильный кластер.**
+
+```{R}
+data_2 %>%
+  separate_rows(Probed_ESSIDs, sep=",") %>%
+  group_by(Probed_ESSIDs) %>%
+  summarise(sd = sd(Power, na.rm = TRUE),
+            mean = mean(Power, na.rm = TRUE)) %>%
+  arrange(sd) %>%
+  head(1) %>%
+  knitr::kable()
+```
+
+## ️Оценка результата
+
+Был проведён анализ журналов с помощью программного пакета `dplyr`
+
+## ️Вывод
+
+В результате выполнения работы были:
+
++ получены знания о методах исследования радиоэлектронной обстановки
++ закреплены практические навыки использования языка программирования R для обработки данных
++ закреплены знания основных функций обработки данных экосистемы `tidyverse` языка R

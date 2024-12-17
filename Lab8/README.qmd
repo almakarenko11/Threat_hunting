@@ -1,6 +1,5 @@
 ---
 title: "Практика в DuckDB"
-author: "m1hailova.vladlena@yandex.ru"
 format: 
   md:
     output-file: README.md

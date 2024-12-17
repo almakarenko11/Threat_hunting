@@ -1,6 +1,5 @@
 ---
 title: "Основы обработки данных с помощью R и Dplyr"
-author: 123
 format: 
   md:
     output-file: README.md
